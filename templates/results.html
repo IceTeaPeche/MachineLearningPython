@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+     <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'Arial', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="p-6 bg-black text-white font-sans relative">
+
+    <a href="{{ url_for('index') }}" class="absolute top-6 right-6 bg-red-500 text-white px-6 py-2 mr-6 font-sans rounded">Retour à la prédiction</a>
+
+    <h1 class="text-4xl font-bold mb-10 text-left ml-20 text-red-500 font-sans">Classement Estimé pour {{ circuit_name }}</h1>
+
+    <div class="grid grid-cols-5 text-left ml-4 pl-2 font-sans">
+        <div class="text-gray-300 font-bold">PODIUM</div>
+        <div class="text-gray-300 font-bold">NOM DES PILOTES</div>
+        <div class="text-gray-300 font-bold">POSITION DE DÉPART</div>
+        <div class="text-gray-300 font-bold">POSITION ESTIMÉE</div>
+    </div>
+
+    <div class="grid grid-cols-5 mt-2 gap-4 pl-5 pr-5">
+
+        <div class="bg-[#1E2020] rounded-l-lg p-4">
+            <ul>
+                {% for item in classement %}
+                <li class="py-2 text-left border-b border-[#313333] font-sans">{{ loop.index }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="bg-[#1E2020] p-4">
+            <ul>
+                {% for item in classement %}
+                <li class="py-2 border-b border-[#313333] font-sans">{{ item.Pilot }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="bg-[#1E2020] p-4">
+            <ul>
+                {% for item in classement %}
+                <li class="py-2 text-left border-b border-[#313333] font-sans">{{ item['Starting Position'] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="bg-[#1E2020] rounded-r-lg p-4">
+            <ul>
+                {% for item in classement %}
+                <li class="py-2 text-left border-b border-[#313333] font-sans">{{ item['Estimated Position'] }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+
+
+    </div>
+
+</body>
+</html>

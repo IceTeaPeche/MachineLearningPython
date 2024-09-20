@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<head>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Poppins', 'Arial', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body class="p-10 bg-black text-white font-sans">
+    <h1 class="text-4xl font-bold mb-6 text-red-500">F1 Position Prediction</h1>
+
+    <form method="POST" action="/">
+
+        {% if error %}
+        <div class="bg-red-200 text-red-800 p-4 mb-4">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <div class="mb-[60px] mt-20">
+            <label for="circuit_name" class="block font-bold mb-6 text-xl ">Choisissez un circuit :</label>
+            <div class="relative">
+                <select name="circuit_name" id="circuit_name" class="block appearance-none w-1/3 bg-[#1E2020] text-white px-4 py-2 pr-8 rounded-[9px] focus:text-white">
+                    {% for circuit in circuits %}
+                    <option value="{{ circuit }}">{{ circuit }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Image du circuit affichée ici -->
+        <div class="absolute top-40 right-40 w-[600px] h-[300px]" id="circuit-image-container">
+            <img id="circuit-image" src="{{ url_for('static', filename='circuitF1/Albert Park.png') }}" alt="Circuit Image" class="w-full h-full object-cover">
+        </div>
+
+        <h2 class="text-xl font-bold mb-6 mt-20">Conditions météorologiques</h2>
+        <div class="space-y-4 w-1/5 mb-16">
+              <div class="flex items-center justify-between">
+                <label for="temp" class="font-semibold text-[#DFDFDF]">Température (C°) :</label>
+                <input type="text" name="temp" id="temp" value="32" class="w-20 h-12 text-center bg-[#1E2020] text-white font-semibold rounded-xl border-none">
+            </div>
+            <div class="flex items-center justify-between">
+                <label for="temp_track" class="font-semibold text-[#DFDFDF]">Température de la piste (C°):</label>
+                <input type="text" name="temp_track" id="temp_track" value="32" class="w-20 h-12 text-center bg-[#1E2020] text-white font-semibold rounded-xl border-none">
+            </div>
+            <div class="flex items-center justify-between">
+                <label for="humidity" class="font-semibold text-[#DFDFDF]">Humidité (%):</label>
+                <input type="text" name="humidity" id="humidity" value="32" class="w-20 h-12 text-center bg-[#1E2020] text-white font-semibold rounded-xl border-none">
+            </div>
+            <div class="flex items-center justify-between">
+                <label for="wind_speed" class="font-semibold text-[#DFDFDF]">Vitesse du vent (km/h):</label>
+                <input type="text" name="wind_speed" id="wind_speed" value="32" class="w-20 h-12 text-center bg-[#1E2020] text-white font-semibold rounded-xl border-none">
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label class="font-semibold mt-4 text-[#DFDFDF]">Est-ce qu'il pleut ?</label>
+                <div class="flex items-center space-x-4">
+                    <label class="flex items-center mt-4">
+                        <input type="radio" name="rain" value="Yes" class="form-radio bg-[#1E2020] text-blue-500 border-none focus:ring-2 focus:ring-blue-500" required>
+                        <span class="ml-2 text-[#DFDFDF]">Oui</span>
+                    </label>
+                    <label class="flex items-center mt-4">
+                        <input type="radio" name="rain" value="No" class="form-radio bg-[#1E2020] text-blue-500 border-none focus:ring-2 focus:ring-blue-500" required>
+                        <span class="ml-2 text-[#DFDFDF]">Non</span>
+                    </label>
+                </div>
+                </div>
+        </div>
+
+        <h2 class="text-xl font-bold mb-10 mt-20">Choix des pilotes et position sur la grille de départ</h2>
+        <div class="mb-4 overflow-x-auto mx-left w-3/4">
+            <table class="min-w-full text-left">
+                <thead>
+                    <tr>
+                        <th class="py-2 text-left pl-4 text-[#DFDFDF]">Choisissez les 22 pilotes</th>
+                        <th class="py-2 text-[#DFDFDF]">Position sur la grille de départ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for i in range(22) %}
+                    <tr>
+                        <td class="px-4 py-1">
+                            <div class="relative">
+                                <select name="selected_pilotes" class="block appearance-none w-full p-2 pr-8 rounded-xl bg-[#1E2020] text-white pilote-select">
+                                    {% for pilote in pilotes %}
+                                    <option value="{{ pilote }}" {% if loop.index == i + 1 %} selected {% endif %}>
+                                        {{ pilote }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
+                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                                        <path d="M5.5 7l4.5 4 4.5-4h-9z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="font-bold pl-28">
+                            {{ i + 1 }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="flex justify-center w-1/3">
+            <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded-xl mt-6 w-[360px]">Prédiction de la course</button>
+        </div>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const selects = document.querySelectorAll('.pilote-select');
+            const allPilots = [...new Set(Array.from(selects).flatMap(select => Array.from(select.options).map(option => option.value)))];
+            const circuitSelect = document.getElementById('circuit_name');
+            const circuitImage = document.getElementById('circuit-image');
+
+            function updateOptions() {
+                const selectedPilots = new Set(Array.from(selects).map(select => select.value));
+
+                selects.forEach(select => {
+                    const currentSelection = select.value;
+                    select.innerHTML = '';
+                    allPilots.forEach(pilot => {
+                        if (!selectedPilots.has(pilot) || pilot === currentSelection) {
+                            const option = document.createElement('option');
+                            option.value = pilot;
+                            option.textContent = pilot;
+                            option.selected = pilot === currentSelection;
+                            select.appendChild(option);
+                        }
+                    });
+                });
+            }
+
+            function updateCircuitImage() {
+                const selectedCircuit = circuitSelect.value;
+                const circuitImages = {
+                    'Albert Park Grand Prix Circuit': "{{ url_for('static', filename='circuitF1/Melbourne.png') }}",
+                    'Bahrain International Circuit': "{{ url_for('static', filename='circuitF1/Bahrain.png') }}",
+                    'Shanghai International Circuit': "{{ url_for('static', filename='circuitF1/.png') }}",
+                    'Baku City Circuit': "{{ url_for('static', filename='circuitF1/.png') }}",
+                    'Circuit de Barcelona-Catalunya': "{{ url_for('static', filename='circuitF1/Barcelona.png') }}",
+                    'Circuit de Monaco': "{{ url_for('static', filename='circuitF1/monaco.png') }}",
+                    'Circuit Gilles Villeneuve': "{{ url_for('static', filename='circuitF1/Gille Vileneuve.png') }}",
+                    'Circuit Paul Ricard':"{{ url_for('static', filename='circuitF1/Paul Ricard.png') }}",
+                    'Red Bull Ring':"{{ url_for('static', filename='circuitF1/.png') }}",
+                    'Silverstone Circuit': "{{ url_for('static', filename='circuitF1/Silverstone.png') }}",
+                    'Hockenheimring': "{{ url_for('static', filename='circuitF1/Hockenheimring.png') }}",
+                    'Hungaroring': "{{ url_for('static', filename='circuitF1/hungaroing.png') }}",
+                    'Circuit de Spa-Francorchamps': "{{ url_for('static', filename='circuitF1/spa francorchamps.png') }}",
+                    'Autodromo Nazionale di Monza': "{{ url_for('static', filename='circuitF1/Nazionale di Monza.png') }}",
+                    'Marina Bay Street Circuit': "{{ url_for('static', filename='circuitF1/marina Bay Street.png') }}",
+                    'Sochi Autodrom': "{{ url_for('static', filename='circuitF1/Sochi autodrom.png') }}",
+                    'Suzuka Circuit':"{{ url_for('static', filename='circuitF1/Suzuka circuit.png') }}",
+                    'Autódromo Hermanos Rodríguez': "{{ url_for('static', filename='circuitF1/Hermanos Rodriguez.png') }}",
+                    'Circuit of the Americas': "{{ url_for('static', filename='circuitF1/circuit of the americas.png') }}",
+                    'Autódromo José Carlos Pace':"{{ url_for('static', filename='circuitF1/José Carlos Pace.png') }}",
+                    'Yas Marina Circuit': "{{ url_for('static', filename='circuitF1/Yas Marina.png') }}",
+                    'Autodromo Internazionale del Mugello':"{{ url_for('static', filename='circuitF1/internazionale del mugello.png') }}",
+                    'Nürburgring': "{{ url_for('static', filename='circuitF1/nurburgring.png') }}",
+                    'Autódromo Internacional do Algarve': "{{ url_for('static', filename='circuitF1/internacional do Algarve.png') }}",
+                    'Autodromo Enzo e Dino Ferrari': "{{ url_for('static', filename='circuitF1/Dino ferrari.png') }}",
+                    'Istanbul Park': "{{ url_for('static', filename='circuitF1/istanbul park.png') }}",
+                    'Losail International Circuit': "{{ url_for('static', filename='circuitF1/Losail international circuit.png') }}",
+                    'Circuit Park Zandvoort': "{{ url_for('static', filename='circuitF1/Park Zandvoort.png') }}",
+                    'Jeddah Corniche Circuit': "{{ url_for('static', filename='circuitF1/Jeddah corniche.png') }}",
+                    'Miami International Autodrome': "{{ url_for('static', filename='circuitF1/Miami international.png') }}",
+                    'Las Vegas Strip Street Circuit': "{{ url_for('static', filename='circuitF1/Las Vegas Strip Street.png') }}",
+
+                };
+
+                circuitImage.src = circuitImages[selectedCircuit] || "{{ url_for('static', filename='image/default.png') }}";
+            }
+
+            selects.forEach(select => {
+                select.addEventListener('change', updateOptions);
+            });
+
+            circuitSelect.addEventListener('change', updateCircuitImage);
+
+            updateOptions();
+            updateCircuitImage();
+        });
+    </script>
+
+    <style>
+        select {
+            border-radius: 8px;
+            padding: 10px;
+            border: 2px solid #DFDFDF;
+        }
+    </style>
+
+</body>
+</html>
