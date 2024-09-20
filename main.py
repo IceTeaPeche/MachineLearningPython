@@ -186,12 +186,8 @@ def index():
 
         # Exemple de positions pré-remplies
         starting_positions = {
-            1: "Hamilton",
-            2: "Verstappen",
-            3: "Bottas",
-            4: "Leclerc",
-            5: "Norris",
-            # Ajoutez plus de positions si nécessaire
+
+
         }
 
         # Supprimer les pilotes déjà placés de la liste des pilotes disponibles
