@@ -69,8 +69,6 @@ def load_data():
 
     print(f"Validation croisée MAE: {-cross_val_scores.mean()} (écart-type: {cross_val_scores.std()})")
 
-
-
     # Stocker dans un dictionnaire
     data = {
         'df': df,
@@ -95,76 +93,111 @@ def index():
         humidity = float(request.form.get('humidity'))
         wind_speed = float(request.form.get('wind_speed'))
         rain = request.form.get('rain')
-        selected_pilotes = request.form.getlist('selected_pilotes')  # Liste des pilotes sélectionnés
 
-        # Traiter les données
+        # Récupérer les positions de départ via les champs cachés
+        starting_positions = {}
+        for i in range(1, 23):
+            pilot = request.form.get(f'position_{i}')
+            if pilot:
+                starting_positions[i] = pilot
+
+        print("Positions Reçues:", starting_positions)  # Ajout du log
+
+        # Vérifier que 22 pilotes ont été sélectionnés
+        if len(starting_positions) != 22:
+            error = f"Vous devez sélectionner exactement 22 pilotes."
+            return render_template('index.html', error=error, circuits=data['df']['circuitName'].unique(), pilotes=data['df']['driverName'].unique(), starting_positions={})
+
+        # Vérifier que tous les pilotes sont uniques
+        if len(set(starting_positions.values())) != 22:
+            error = f"Tous les pilotes doivent être uniques."
+            return render_template('index.html', error=error, circuits=data['df']['circuitName'].unique(), pilotes=data['df']['driverName'].unique(), starting_positions=starting_positions)
+
+        # Vérifier que tous les pilotes existent dans le dataframe
         df = data['df']
-        if circuit_name not in df['circuitName'].values:
-            error = f"Circuit {circuit_name} non trouvé."
-            return render_template('index.html', error=error)
-        else:
-            circuit_encoded = df[df['circuitName'] == circuit_name]['circuitId'].iloc[0]
+        all_pilots = df['driverName'].unique()
+        not_found_pilots = [p for p in starting_positions.values() if p not in all_pilots]
+        if not_found_pilots:
+            error = f"Les pilotes suivants n'ont pas été trouvés dans la base de données : {', '.join(not_found_pilots)}"
+            # Exclure les pilotes non trouvés de la liste des pilotes disponibles
+            available_pilotes = [p for p in all_pilots if p not in starting_positions.values()]
+            return render_template('index.html', error=error, circuits=data['df']['circuitName'].unique(), pilotes=available_pilotes, starting_positions=starting_positions)
 
-            high_temp = 1 if temp > 30 else 0
-            strong_wind = 1 if wind_speed > 20 else 0
+        # Traiter les données pour la prédiction
+        results = []
 
-            # Vérifier que 22 pilotes ont été sélectionnés
-            if len(selected_pilotes) != 22:
-                error = f"Vous devez sélectionner exactement 22 pilotes."
-                return render_template('index.html', error=error, circuits=data['df']['circuitName'].unique(), pilotes=data['df']['driverName'].unique())
-            else:
-                # Normaliser les noms pour éviter les problèmes d'espaces ou de casse
-                selected_pilotes = [p.strip() for p in selected_pilotes]
+        # Encoder le circuit
+        circuit_encoded = df[df['circuitName'] == circuit_name]['circuitId'].iloc[0]
 
-                # Vérifier que tous les pilotes existent dans le dataframe
-                not_found_pilots = [p for p in selected_pilotes if p not in df['driverName'].values]
-                if not not_found_pilots:
-                    results = []
-                    starting_positions = list(range(1, 23))  # Générer les positions de départ automatiquement de 1 à 22
+        # Déterminer les conditions météorologiques
+        high_temp = 1 if temp > 30 else 0
+        strong_wind = 1 if wind_speed > 20 else 0
 
-                    for idx, driver in enumerate(selected_pilotes):
-                        driver_encoded = df[df['driverName'] == driver]['driverId'].iloc[0]
-                        starting_position = starting_positions[idx]  # Position automatique
+        for position, driver in starting_positions.items():
+            driver_encoded = df[df['driverName'] == driver]['driverId'].iloc[0]
 
-                        input_data = [[circuit_encoded, df['avg_time_lap'].mean(), df['fastestLapTime'].mean(),
-                                       1 if rain.lower() == 'yes' else 0, high_temp, strong_wind,
-                                       temp, temp_track, humidity, wind_speed, df['WindDirection'].mean(),
-                                       driver_encoded, starting_position]]
+            # Préparer les données d'entrée pour le modèle
+            input_data = [[
+                circuit_encoded,
+                df['avg_time_lap'].mean(),
+                df['fastestLapTime'].mean(),
+                1 if rain.lower() == 'yes' else 0,
+                high_temp,
+                strong_wind,
+                temp,
+                temp_track,
+                humidity,
+                wind_speed,
+                df['WindDirection'].mean(),
+                driver_encoded,
+                position
+            ]]
 
-                        input_data_scaled = data['scaler'].transform(pd.DataFrame(input_data, columns=data['X_train_columns']))
+            input_data_df = pd.DataFrame(input_data, columns=data['X_train_columns'])
+            input_data_scaled = data['scaler'].transform(input_data_df)
+            position_pred = data['model'].predict(input_data_scaled)[0]
+            results.append([driver, position, position_pred])
 
-                        position_pred = data['model'].predict(input_data_scaled)[0]
-                        results.append([driver, starting_position, position_pred])
+        # Trier les résultats par la position prédite
+        results = sorted(results, key=lambda x: x[2])
 
-                    # Trier les résultats par la position prédite
-                    results = sorted(results, key=lambda x: x[2])
+        classement_final = []
+        for idx, result in enumerate(results):
+            classement_final.append({
+                'Pilot': result[0],
+                'Starting Position': result[1],
+                'Estimated Position': idx + 1,
+                'Score': round(result[2], 2)
+            })
 
-                    classement_final = []
-                    for idx, result in enumerate(results):
-                        classement_final.append({
-                            'Pilot': result[0],
-                            'Starting Position': result[1],
-                            'Estimated Position': idx + 1,
-                            'Score': result[2]
-                        })
+        # Calculer les métriques d'évaluation
+        y_pred = data['model'].predict(data['X_test_scaled'])
+        mae = mean_absolute_error(data['y_test'], y_pred)
+        mse = mean_squared_error(data['y_test'], y_pred)
+        ndcg_val = ndcg_score(np.asarray([data['y_test'].values.flatten()]), np.asarray([y_pred.flatten()]), k=10)
 
-                    # Calculer les métriques d'évaluation
-                    y_pred = data['model'].predict(data['X_test_scaled'])
-                    mae = mean_absolute_error(data['y_test'], y_pred)
-                    mse = mean_squared_error(data['y_test'], y_pred)
-                    ndcg_val = ndcg_score(np.asarray([data['y_test'].values.flatten()]), np.asarray([y_pred.flatten()]), k=10)
-
-                    return render_template('results.html', classement=classement_final, circuit_name=circuit_name, mae=mae, mse=mse, ndcg_val=ndcg_val)
-                else:
-                    error = f"Les pilotes suivants n'ont pas été trouvés dans la base de données : {', '.join(not_found_pilots)}"
-                    return render_template('index.html', error=error, circuits=data['df']['circuitName'].unique(), pilotes=data['df']['driverName'].unique())
+        return render_template('results.html', classement=classement_final, circuit_name=circuit_name, mae=mae, mse=mse, ndcg_val=ndcg_val)
 
     else:
-        # GET request, rendre le formulaire
+        # GET request, rendre le formulaire avec les positions pré-remplies
         df = data['df']
         circuits = df['circuitName'].unique()
-        pilotes = df['driverName'].unique()
-        return render_template('index.html', circuits=circuits, pilotes=pilotes)
+        all_pilotes = df['driverName'].unique()
+
+        # Exemple de positions pré-remplies
+        starting_positions = {
+            1: "Hamilton",
+            2: "Verstappen",
+            3: "Bottas",
+            4: "Leclerc",
+            5: "Norris",
+            # Ajoutez plus de positions si nécessaire
+        }
+
+        # Supprimer les pilotes déjà placés de la liste des pilotes disponibles
+        available_pilotes = [pilot for pilot in all_pilotes if pilot not in starting_positions.values()]
+
+        return render_template('index.html', circuits=circuits, pilotes=available_pilotes, starting_positions=starting_positions)
 
 if __name__ == '__main__':
     app.run(debug=True)

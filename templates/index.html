@@ -1,9 +1,10 @@
 <!DOCTYPE html>
+<html lang="fr">
 <head>
-
+    <meta charset="UTF-8">
+    <title>F1 Position Prediction</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-
         tailwind.config = {
             theme: {
                 extend: {
@@ -15,12 +16,54 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        .draggable {
+            user-select: none;
+        }
+
+        .droppable {
+            user-select: none;
+            border: 2px dashed #DFDFDF;
+            transition: background-color 0.3s;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .droppable:hover {
+            background-color: #2A2A2A;
+        }
+
+        .starting-grid {
+            display: grid;
+            grid-template-columns: 1fr; /* Une seule colonne */
+            grid-auto-rows: minmax(50px, auto);
+            gap: 10px;
+        }
+
+        .starting-grid-item {
+            background-color: #2A2A2A;
+            padding: 10px;
+            text-align: center;
+            color: white;
+            border-radius: 8px;
+            position: relative;
+            user-select: none;
+            border: 2px dashed #DFDFDF;
+            cursor: pointer;
+        }
+
+        .starting-grid-item.pilot {
+            /* Style pour les pilotes placés */
+            background-color: #1E90FF;
+        }
+    </style>
 </head>
 <body class="p-10 bg-black text-white font-sans">
     <h1 class="text-4xl font-bold mb-6 text-red-500">F1 Position Prediction</h1>
 
     <form method="POST" action="/">
-
         {% if error %}
         <div class="bg-red-200 text-red-800 p-4 mb-4">
             {{ error }}
@@ -28,7 +71,7 @@
         {% endif %}
 
         <div class="mb-[60px] mt-20">
-            <label for="circuit_name" class="block font-bold mb-6 text-xl ">Choisissez un circuit :</label>
+            <label for="circuit_name" class="block font-bold mb-6 text-xl">Choisissez un circuit :</label>
             <div class="relative">
                 <select name="circuit_name" id="circuit_name" class="block appearance-none w-1/3 bg-[#1E2020] text-white px-4 py-2 pr-8 rounded-[9px] focus:text-white">
                     {% for circuit in circuits %}
@@ -45,7 +88,7 @@
 
         <h2 class="text-xl font-bold mb-6 mt-20">Conditions météorologiques</h2>
         <div class="space-y-4 w-1/5 mb-16">
-              <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
                 <label for="temp" class="font-semibold text-[#DFDFDF]">Température (C°) :</label>
                 <input type="text" name="temp" id="temp" value="32" class="w-20 h-12 text-center bg-[#1E2020] text-white font-semibold rounded-xl border-none">
             </div>
@@ -74,134 +117,227 @@
                         <span class="ml-2 text-[#DFDFDF]">Non</span>
                     </label>
                 </div>
-                </div>
+            </div>
         </div>
 
         <h2 class="text-xl font-bold mb-10 mt-20">Choix des pilotes et position sur la grille de départ</h2>
-        <div class="mb-4 overflow-x-auto mx-left w-3/4">
-            <table class="min-w-full text-left">
-                <thead>
-                    <tr>
-                        <th class="py-2 text-left pl-4 text-[#DFDFDF]">Choisissez les 22 pilotes</th>
-                        <th class="py-2 text-[#DFDFDF]">Position sur la grille de départ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for i in range(22) %}
-                    <tr>
-                        <td class="px-4 py-1">
-                            <div class="relative">
-                                <select name="selected_pilotes" class="block appearance-none w-full p-2 pr-8 rounded-xl bg-[#1E2020] text-white pilote-select">
-                                    {% for pilote in pilotes %}
-                                    <option value="{{ pilote }}" {% if loop.index == i + 1 %} selected {% endif %}>
-                                        {{ pilote }}
-                                    </option>
-                                    {% endfor %}
-                                </select>
-                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white">
-                                    <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                                        <path d="M5.5 7l4.5 4 4.5-4h-9z"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="font-bold pl-28">
-                            {{ i + 1 }}
-                        </td>
-                    </tr>
+
+        <!-- Section Drag and Drop -->
+        <div class="flex justify-between space-x-8">
+            <div class="w-1/3 bg-[#1E2020] p-4 rounded-lg">
+                <h3 class="text-center font-bold text-[#DFDFDF] mb-4">Liste des Pilotes</h3>
+                <ul id="pilot-list" class="space-y-2">
+                    {% for pilote in pilotes %}
+                    <li class="cursor-pointer bg-[#2A2A2A] p-2 text-center text-white rounded-lg draggable" draggable="true" data-pilot="{{ pilote }}">
+                        {{ pilote }}
+                    </li>
                     {% endfor %}
-                </tbody>
-            </table>
+                </ul>
+            </div>
+
+            <div class="w-2/3 bg-[#1E2020] p-4 rounded-lg">
+                <h3 class="text-center font-bold text-[#DFDFDF] mb-4">Positions de Départ</h3>
+                <ul id="starting-positions" class="starting-grid">
+                    {% for i in range(1, 23) %}
+                    <li class="starting-grid-item droppable" data-position="{{ i }}">
+                        {% if starting_positions.get(i) %}
+                            <span class="draggable pilot" draggable="true" data-pilot="{{ starting_positions[i] }}">{{ starting_positions[i] }}</span>
+                            <!-- Champ caché pour la position pré-remplie -->
+                            <input type="hidden" name="position_{{ i }}" value="{{ starting_positions[i] }}">
+                        {% else %}
+                            Position {{ i }}
+                            <!-- Champ caché vide pour les positions vides -->
+                            <input type="hidden" name="position_{{ i }}" value="">
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
 
-        <div class="flex justify-center w-1/3">
+        <!-- Boutons de Soumission et Assignation Aléatoire -->
+        <div class="flex justify-center w-1/3 space-x-4">
             <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded-xl mt-6 w-[360px]">Prédiction de la course</button>
+            <button type="button" id="random-assign-button" class="bg-blue-500 text-white px-6 py-2 rounded-xl mt-6 w-[360px]">Assigner Aléatoirement</button>
         </div>
     </form>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const selects = document.querySelectorAll('.pilote-select');
-            const allPilots = [...new Set(Array.from(selects).flatMap(select => Array.from(select.options).map(option => option.value)))];
-            const circuitSelect = document.getElementById('circuit_name');
-            const circuitImage = document.getElementById('circuit-image');
+            const pilotList = document.getElementById('pilot-list');
+            const positions = document.querySelectorAll('.droppable');
+            let draggedPilot = null;
+            let placedPilots = new Set();  // Set pour stocker les pilotes déjà placés
 
-            function updateOptions() {
-                const selectedPilots = new Set(Array.from(selects).map(select => select.value));
+            // Initialiser le Set avec les pilotes déjà placés
+            {% for position, pilot in starting_positions.items() %}
+                placedPilots.add("{{ pilot }}");
+            {% endfor %}
 
-                selects.forEach(select => {
-                    const currentSelection = select.value;
-                    select.innerHTML = '';
-                    allPilots.forEach(pilot => {
-                        if (!selectedPilots.has(pilot) || pilot === currentSelection) {
-                            const option = document.createElement('option');
-                            option.value = pilot;
-                            option.textContent = pilot;
-                            option.selected = pilot === currentSelection;
-                            select.appendChild(option);
-                        }
-                    });
-                });
-            }
-
-            function updateCircuitImage() {
-                const selectedCircuit = circuitSelect.value;
-                const circuitImages = {
-                    'Albert Park Grand Prix Circuit': "{{ url_for('static', filename='circuitF1/Melbourne.png') }}",
-                    'Bahrain International Circuit': "{{ url_for('static', filename='circuitF1/Bahrain.png') }}",
-                    'Shanghai International Circuit': "{{ url_for('static', filename='circuitF1/.png') }}",
-                    'Baku City Circuit': "{{ url_for('static', filename='circuitF1/.png') }}",
-                    'Circuit de Barcelona-Catalunya': "{{ url_for('static', filename='circuitF1/Barcelona.png') }}",
-                    'Circuit de Monaco': "{{ url_for('static', filename='circuitF1/monaco.png') }}",
-                    'Circuit Gilles Villeneuve': "{{ url_for('static', filename='circuitF1/Gille Vileneuve.png') }}",
-                    'Circuit Paul Ricard':"{{ url_for('static', filename='circuitF1/Paul Ricard.png') }}",
-                    'Red Bull Ring':"{{ url_for('static', filename='circuitF1/.png') }}",
-                    'Silverstone Circuit': "{{ url_for('static', filename='circuitF1/Silverstone.png') }}",
-                    'Hockenheimring': "{{ url_for('static', filename='circuitF1/Hockenheimring.png') }}",
-                    'Hungaroring': "{{ url_for('static', filename='circuitF1/hungaroing.png') }}",
-                    'Circuit de Spa-Francorchamps': "{{ url_for('static', filename='circuitF1/spa francorchamps.png') }}",
-                    'Autodromo Nazionale di Monza': "{{ url_for('static', filename='circuitF1/Nazionale di Monza.png') }}",
-                    'Marina Bay Street Circuit': "{{ url_for('static', filename='circuitF1/marina Bay Street.png') }}",
-                    'Sochi Autodrom': "{{ url_for('static', filename='circuitF1/Sochi autodrom.png') }}",
-                    'Suzuka Circuit':"{{ url_for('static', filename='circuitF1/Suzuka circuit.png') }}",
-                    'Autódromo Hermanos Rodríguez': "{{ url_for('static', filename='circuitF1/Hermanos Rodriguez.png') }}",
-                    'Circuit of the Americas': "{{ url_for('static', filename='circuitF1/circuit of the americas.png') }}",
-                    'Autódromo José Carlos Pace':"{{ url_for('static', filename='circuitF1/José Carlos Pace.png') }}",
-                    'Yas Marina Circuit': "{{ url_for('static', filename='circuitF1/Yas Marina.png') }}",
-                    'Autodromo Internazionale del Mugello':"{{ url_for('static', filename='circuitF1/internazionale del mugello.png') }}",
-                    'Nürburgring': "{{ url_for('static', filename='circuitF1/nurburgring.png') }}",
-                    'Autódromo Internacional do Algarve': "{{ url_for('static', filename='circuitF1/internacional do Algarve.png') }}",
-                    'Autodromo Enzo e Dino Ferrari': "{{ url_for('static', filename='circuitF1/Dino ferrari.png') }}",
-                    'Istanbul Park': "{{ url_for('static', filename='circuitF1/istanbul park.png') }}",
-                    'Losail International Circuit': "{{ url_for('static', filename='circuitF1/Losail international circuit.png') }}",
-                    'Circuit Park Zandvoort': "{{ url_for('static', filename='circuitF1/Park Zandvoort.png') }}",
-                    'Jeddah Corniche Circuit': "{{ url_for('static', filename='circuitF1/Jeddah corniche.png') }}",
-                    'Miami International Autodrome': "{{ url_for('static', filename='circuitF1/Miami international.png') }}",
-                    'Las Vegas Strip Street Circuit': "{{ url_for('static', filename='circuitF1/Las Vegas Strip Street.png') }}",
-
-                };
-
-                circuitImage.src = circuitImages[selectedCircuit] || "{{ url_for('static', filename='image/default.png') }}";
-            }
-
-            selects.forEach(select => {
-                select.addEventListener('change', updateOptions);
+            // Utiliser l'événement de délégation pour 'dragstart'
+            document.addEventListener('dragstart', function(e) {
+                if (e.target && e.target.classList.contains('draggable')) {
+                    draggedPilot = e.target;
+                }
             });
 
-            circuitSelect.addEventListener('change', updateCircuitImage);
+            // Gérer le drop sur les positions
+            positions.forEach(position => {
+                position.addEventListener('dragover', function(e) {
+                    e.preventDefault();
+                });
 
-            updateOptions();
-            updateCircuitImage();
+                position.addEventListener('drop', function() {
+                    if (draggedPilot) {
+                        const pilotName = draggedPilot.getAttribute('data-pilot');
+
+                        // Vérifier si le pilote est déjà placé
+                        if (!placedPilots.has(pilotName)) {
+                            // Remplacer le pilote dans la position si un autre est déjà là
+                            const currentPilot = this.querySelector('.draggable');
+                            if (currentPilot) {
+                                const previousPilotName = currentPilot.getAttribute('data-pilot');
+                                placedPilots.delete(previousPilotName);  // Retirer l'ancien pilote du Set
+                                pilotList.appendChild(currentPilot);  // Remettre l'ancien pilote dans la liste
+
+                                // Mettre à jour le champ caché correspondant
+                                const positionNumber = this.getAttribute('data-position');
+                                document.querySelector(`input[name="position_${positionNumber}"]`).value = '';
+                            }
+
+                            // Ajouter le nouveau pilote à la position
+                            this.innerHTML = draggedPilot.outerHTML;
+                            this.querySelector('.draggable').classList.add('pilot');
+                            this.setAttribute('data-pilot', pilotName);
+                            placedPilots.add(pilotName);  // Ajouter le nouveau pilote au Set
+
+                            // Mettre à jour le champ caché correspondant
+                            const positionNumber = this.getAttribute('data-position');
+                            document.querySelector(`input[name="position_${positionNumber}"]`).value = pilotName;
+
+                            // Supprimer le pilote de la liste des pilotes disponibles
+                            draggedPilot.remove();
+                        } else {
+                            // Si le pilote est déjà sur la grille, le repositionner
+                            const positionsWithPilot = document.querySelectorAll('.droppable[data-pilot="' + pilotName + '"]');
+                            positionsWithPilot.forEach(pos => {
+                                const pilotElement = pos.querySelector('.draggable');
+                                if (pilotElement) {
+                                    pilotList.appendChild(pilotElement);  // Remettre le pilote dans la liste
+                                    pos.innerHTML = 'Position ' + pos.getAttribute('data-position');  // Réinitialiser la case
+
+                                    // Mettre à jour le champ caché correspondant
+                                    const positionNumber = pos.getAttribute('data-position');
+                                    document.querySelector(`input[name="position_${positionNumber}"]`).value = '';
+
+                                    placedPilots.delete(pilotName);  // Libérer le pilote du Set
+                                }
+                            });
+
+                            // Ajouter le nouveau pilote à la position
+                            this.innerHTML = draggedPilot.outerHTML;
+                            this.querySelector('.draggable').classList.add('pilot');
+                            this.setAttribute('data-pilot', pilotName);
+                            placedPilots.add(pilotName);  // Ajouter le nouveau pilote au Set
+
+                            // Mettre à jour le champ caché correspondant
+                            const positionNumber = this.getAttribute('data-position');
+                            document.querySelector(`input[name="position_${positionNumber}"]`).value = pilotName;
+
+                            // Supprimer le pilote de la liste des pilotes disponibles
+                            draggedPilot.remove();
+                        }
+                    }
+                });
+            });
+
+            // Permet de réinitialiser la position si le pilote est retiré de la grille
+            positions.forEach(position => {
+                position.addEventListener('dblclick', function() {
+                    const currentPilot = this.querySelector('.draggable');
+                    if (currentPilot) {
+                        const pilotName = currentPilot.getAttribute('data-pilot');
+                        placedPilots.delete(pilotName);  // Retirer le pilote du Set
+                        pilotList.appendChild(currentPilot);  // Remettre le pilote dans la liste
+                        this.innerHTML = 'Position ' + this.getAttribute('data-position');  // Réinitialiser la case
+
+                        // Mettre à jour le champ caché correspondant
+                        const positionNumber = this.getAttribute('data-position');
+                        document.querySelector(`input[name="position_${positionNumber}"]`).value = '';
+                    }
+                });
+            });
+
+            // Fonction pour assigner aléatoirement les pilotes
+            document.getElementById('random-assign-button').addEventListener('click', () => {
+                // Récupérer tous les pilotes disponibles (dans la liste)
+                const availablePilots = Array.from(pilotList.querySelectorAll('.draggable')).map(el => el.getAttribute('data-pilot'));
+
+                // Récupérer tous les pilotes déjà placés
+                const placedPilotsArray = Array.from(placedPilots);
+
+                // Combiner les deux listes
+                const allPilots = availablePilots.concat(placedPilotsArray);
+
+                console.log('Pilotes Disponibles:', availablePilots);
+                console.log('Pilotes Placés:', placedPilotsArray);
+                console.log('Tous les Pilotes:', allPilots);
+
+                // Vérifier qu'il y a au moins 22 pilotes
+                if (allPilots.length < 22) {
+                    alert('Il n\'y a pas assez de pilotes pour assigner aléatoirement.');
+                    return;
+                }
+
+                // Mélanger la liste des pilotes (Fisher-Yates Shuffle)
+                for (let i = allPilots.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allPilots[i], allPilots[j]] = [allPilots[j], allPilots[i]];
+                }
+
+                // Sélectionner les 22 premiers pilotes
+                const selectedPilots = allPilots.slice(0, 22);
+                console.log('Pilotes Sélectionnés:', selectedPilots);
+
+                // Réinitialiser toutes les positions
+                positions.forEach(position => {
+                    const positionNumber = position.getAttribute('data-position');
+                    const currentPilot = position.querySelector('.draggable');
+
+                    if (currentPilot) {
+                        const pilotName = currentPilot.getAttribute('data-pilot');
+                        placedPilots.delete(pilotName);
+                        pilotList.appendChild(currentPilot);
+                        position.innerHTML = `Position ${positionNumber}`;
+                        document.querySelector(`input[name="position_${positionNumber}"]`).value = '';
+                    }
+                });
+
+                // Assigner les pilotes sélectionnés aux positions
+                selectedPilots.forEach((pilot, index) => {
+                    const position = positions[index];
+                    position.innerHTML = `<span class="draggable pilot" draggable="true" data-pilot="${pilot}">${pilot}</span>
+                        <input type="hidden" name="position_${position.getAttribute('data-position')}" value="${pilot}">`;
+                    placedPilots.add(pilot);
+                });
+
+                console.log('Positions Assignées:', selectedPilots);
+
+                // Mettre à jour la liste des pilotes disponibles avec les pilotes restants
+                const remainingPilots = allPilots.slice(22);
+                pilotList.innerHTML = '';
+                remainingPilots.forEach(pilot => {
+                    pilotList.innerHTML += `<li class="cursor-pointer bg-[#2A2A2A] p-2 text-center text-white rounded-lg draggable" draggable="true" data-pilot="${pilot}">
+                        ${pilot}
+                    </li>`;
+                });
+
+                console.log('Pilotes Restants:', remainingPilots);
+
+                // Mettre à jour le Set des pilotes placés
+                placedPilots = new Set(selectedPilots);
+            });
         });
     </script>
-
-    <style>
-        select {
-            border-radius: 8px;
-            padding: 10px;
-            border: 2px solid #DFDFDF;
-        }
-    </style>
-
 </body>
 </html>

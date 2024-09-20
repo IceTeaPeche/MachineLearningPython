@@ -1,7 +1,10 @@
 <!DOCTYPE html>
+<html lang="fr">
 <head>
+    <meta charset="UTF-8">
+    <title>Résultats de la Prédiction</title>
     <script src="https://cdn.tailwindcss.com"></script>
-     <script>
+    <script>
         tailwind.config = {
             theme: {
                 extend: {
@@ -12,57 +15,69 @@
             },
         }
     </script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border: 1px solid #2A2A2A;
+            text-align: center;
+        }
+
+        th {
+            background-color: #AB1010;
+            color: #DFDFDF;
+        }
+
+        tr:nth-child(even) {
+            background-color: #1E2020;
+        }
+
+        tr:hover {
+            background-color: #CA0D0D;
+            color: white;
+        }
+    </style>
 </head>
-<body class="p-6 bg-black text-white font-sans relative">
+<body class="p-10 bg-black text-white font-sans">
+    <h1 class="text-4xl font-bold mb-6 text-red-500">Résultats de la Prédiction</h1>
 
-    <a href="{{ url_for('index') }}" class="absolute top-6 right-6 bg-red-500 text-white px-6 py-2 mr-6 font-sans rounded">Retour à la prédiction</a>
+    <h2 class="text-xl font-bold mb-4">Circuit: {{ circuit_name }}</h2>
 
-    <h1 class="text-4xl font-bold mb-10 text-left ml-20 text-red-500 font-sans">Classement Estimé pour {{ circuit_name }}</h1>
+    <table class="mb-6">
+        <thead>
+            <tr>
+                <th>Pilote</th>
+                <th>Position de Départ</th>
+                <th>Position Estimée</th>
+                <th>Score</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in classement %}
+            <tr class="bg-[#313333]">
+                <td>{{ entry.Pilot }}</td>
+                <td>{{ entry['Starting Position'] }}</td>
+                <td>{{ entry['Estimated Position'] }}</td>
+                <td>{{ entry.Score }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 
-    <div class="grid grid-cols-5 text-left ml-4 pl-2 font-sans">
-        <div class="text-gray-300 font-bold">PODIUM</div>
-        <div class="text-gray-300 font-bold">NOM DES PILOTES</div>
-        <div class="text-gray-300 font-bold">POSITION DE DÉPART</div>
-        <div class="text-gray-300 font-bold">POSITION ESTIMÉE</div>
+    <div class="mb-4">
+        <h3 class="text-lg font-semibold">Métriques d'Évaluation</h3>
+        <p>MAE: {{ mae }}</p>
+        <p>MSE: {{ mse }}</p>
+        <p>NDCG@10: {{ ndcg_val }}</p>
     </div>
 
-    <div class="grid grid-cols-5 mt-2 gap-4 pl-5 pr-5">
-
-        <div class="bg-[#1E2020] rounded-l-lg p-4">
-            <ul>
-                {% for item in classement %}
-                <li class="py-2 text-left border-b border-[#313333] font-sans">{{ loop.index }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="bg-[#1E2020] p-4">
-            <ul>
-                {% for item in classement %}
-                <li class="py-2 border-b border-[#313333] font-sans">{{ item.Pilot }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="bg-[#1E2020] p-4">
-            <ul>
-                {% for item in classement %}
-                <li class="py-2 text-left border-b border-[#313333] font-sans">{{ item['Starting Position'] }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-        <div class="bg-[#1E2020] rounded-r-lg p-4">
-            <ul>
-                {% for item in classement %}
-                <li class="py-2 text-left border-b border-[#313333] font-sans">{{ item['Estimated Position'] }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-
-
-
+    <div>
+        <a href="{{ url_for('index') }}" class="bg-red-500 text-white px-4 py-2 rounded-lg">Retour au Formulaire</a>
     </div>
-
 </body>
 </html>
